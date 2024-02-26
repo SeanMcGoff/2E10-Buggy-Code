@@ -1,11 +1,12 @@
 #include "motors.h"
 #include <WiFiS3.h>
-const char ssid[] = "edna";        // your network SSID (name)
-const char pass[] = "ednamode";    // your network password (use for WPA, or use as key for WEP)
- 
+const char ssid[] = "edna";      // your network SSID (name)
+const char pass[] = "ednamode";  // your network password (use for WPA, or use as key for WEP)
 
-int status = WL_IDLE_STATUS; // WIFI Status
-WiFiServer server(80); // Server
+
+int status = WL_IDLE_STATUS;  // WIFI Status
+
+WiFiServer server(80);  // Server
 
 typedef enum RequestStatus {
   START,
@@ -13,35 +14,39 @@ typedef enum RequestStatus {
   UNDEFINED
 };
 
-int led =  LED_BUILTIN;
+int led = LED_BUILTIN;
 
 // IR Defs
 const int LEYE = D12;
 const int REYE = D13;
 bool irState[2];
 
-bool motorsActivated = false; // Run Motor Code Flag
+//D2 is Echo
+const int US_ECHO = 2;
+const int US_TRIG = 3;
+const int DISTANCE_SENS = 15;
+bool obstacle_detected = false;
+
+bool motorsActivated = false;  // Run Motor Code Flag
+
+unsigned long startTimer = millis(); // Timer Thing
 
 void updateBuggyMotors() {
   irState[0] = digitalRead(LEYE);
   irState[1] = digitalRead(REYE);
-  if(irState[0] == HIGH && irState[1] == HIGH) {
-    Serial.println("Here 1");
+  if (irState[0] == HIGH && irState[1] == HIGH) {
     // On the white path
     leftMotorForward(200);
     rightMotorForward(180);
-  } else if(irState[0] == LOW && irState[1] == LOW) {
-    Serial.println("Here 2");
+  } else if (irState[0] == LOW && irState[1] == LOW) {
     // Not on any path
     stopMotors();
-  } else if(irState[0] == LOW && irState[1] == HIGH) {
-    Serial.println("Here 3");
+  } else if (irState[0] == LOW && irState[1] == HIGH) {
     // Turn Left
     rightMotorForward(180);
     leftMotorForward(0);
   } else {
-    Serial.println("Here 4");
-    // Turn Right 
+    // Turn Right
     leftMotorForward(200);
     rightMotorForward(0);
   }
@@ -57,10 +62,6 @@ void printWiFiStatus() {
   IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
   Serial.println(ip);
-
-  // print where to go in a browser:
-  Serial.print("To see this page in action, open a browser to http://");
-  Serial.println(ip);
 }
 
 
@@ -71,18 +72,20 @@ void startWiFi() {
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
     // don't continue
-    while (true);
+    while (true)
+      ;
   }
 
   // print the network name (SSID);
-  Serial.println("Creating access point named: ");
+  Serial.print("Creating access point named: ");
   Serial.println(ssid);
 
   // Create open network. Change this line if you want to create an WEP network:
   status = WiFi.beginAP(ssid, pass);
   if (status != WL_AP_LISTENING) {
     Serial.println("Creating access point failed");
-    while (true);
+    while (true)
+      ;
   }
 
   // wait 10 seconds for connection:
@@ -95,85 +98,110 @@ void startWiFi() {
   printWiFiStatus();
 }
 
+int getUSDistance() {
+  long duration;
+  digitalWrite(US_TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(US_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(US_TRIG, LOW);
+
+  duration = pulseIn(US_ECHO, HIGH);
+
+  return duration / 58;
+}
 
 RequestStatus recieveRequest(WiFiClient client) {
-  Serial.println("new client");           // print a message out the Serial port
-  String currentLine = "";                // make a String to hold incoming data from the client
-  while (client.connected()) {
+  Serial.print("Recieving Request: ");  // print a message out the Serial port
+  String currentLine = "";       // make a String to hold incoming data from the client
+  if(client.connected()) {
     delayMicroseconds(10);
-    if(client.available()) {
+    while(client.available()) {
       char c = client.read();
-      Serial.print(c);
-      if(c == '\n') {
-        Serial.println("");
-          if (currentLine.startsWith("GET /START")) {
-            client.println("ACTIVATE THE MOTORS!!!");
-            Serial.println("ACTIVATE THE MOTORS!!!");
-            Serial.println("client disconnected");
-            client.stop();
-            return RequestStatus::START;
-          } else if (currentLine.startsWith("GET /STOP")) {
-            client.println("DEACTIVATE THE MOTORS!!!");
-            Serial.println("DEACTIVATE THE MOTORS!!!");
-            Serial.println("client disconnected");
-            client.stop();
-            return RequestStatus::STOP;
-          } else {
-            currentLine = ""; 
-          }
-          if(currentLine == 0) {
-            client.println("YOU DID FUCK ALL WITH THE MOTORS!!!");
-            Serial.println("YOU DID FUCK ALL WITH THE MOTORS!!!");
-            Serial.println("client disconnected");
-            client.stop();
-            return RequestStatus::UNDEFINED;
-          }
-      }
-      if(c != '\r') currentLine += c;
+      //Serial.print(c);
+      if (c == '\n') {
+        // START CASE
+        if(currentLine == "start") {
+          Serial.println("Start Motors");
+          return RequestStatus::START;
+        }
+        // STOP CASE
+        if(currentLine == "stop") {
+          Serial.println("Stop Motors");
+          return RequestStatus::STOP;
+        }
+        // PING CASE
+        if (currentLine == "ping") {
+          Serial.println("Ping");
+          client.write(obstacle_detected ? 1 : 0);
+          return RequestStatus::UNDEFINED;
+        }
+        // BAD COMMAND CASE
+        Serial.println(" Bad Command");
+        return RequestStatus::UNDEFINED;
+        }
+      if (c != '\r') currentLine += c;
     }
-  } 
-  client.stop();
+  }
+  // In the weird case it gets heres
   return RequestStatus::UNDEFINED;
 }
 
 void setup() {
   Serial.begin(9600);
-  
-  pinMode(led, OUTPUT);      // set the LED pin mode
+
+  pinMode(led, OUTPUT);  // set the LED pin mode
   // Set IR Sensor pin modes
-  pinMode( LEYE, INPUT );
-  pinMode( REYE, INPUT );
+  pinMode(LEYE, INPUT);
+  pinMode(REYE, INPUT);
 
   // Set PWM Motor Speed
   pinMode(LEFT_MOTOR_PWM, OUTPUT);
   pinMode(RIGHT_MOTOR_PWM, OUTPUT);
-  
+
   // Direction Output
   pinMode(LEFT_MOTOR_DIRECTION[0], OUTPUT);
   pinMode(LEFT_MOTOR_DIRECTION[1], OUTPUT);
   pinMode(RIGHT_MOTOR_DIRECTION[0], OUTPUT);
   pinMode(RIGHT_MOTOR_DIRECTION[1], OUTPUT);
 
-  startWiFi(); // Starts the wifi
+  // Ultrasonic Sensor Mode Defs
+  pinMode(US_TRIG, OUTPUT);
+  pinMode(US_ECHO, INPUT);
+
+  startWiFi();  // Starts the wifi
 }
 
 void loop() {
-
-  WiFiClient client = server.available();   // listen for incoming clients
-  if(client) {
-    RequestStatus status = recieveRequest(client);
-    switch (status) {
-    case RequestStatus::START:
-      motorsActivated = true;
-      break;
-    case RequestStatus::STOP:
-      motorsActivated = false;
-      break;
-    case RequestStatus::UNDEFINED:
-      break;
+  if(millis() - startTimer >= 250) {
+    WiFiClient client = server.available();  // listen for incoming clients
+    if (client && client.available()) {
+      RequestStatus status = recieveRequest(client);
+      switch (status) {
+        case RequestStatus::START:
+          motorsActivated = true;
+          break;
+        case RequestStatus::STOP:
+          motorsActivated = false;
+          break;
+        case RequestStatus::UNDEFINED:
+          break;
+      }
     }
+    startTimer = millis();
   }
-  if(motorsActivated) updateBuggyMotors();
-  else stopMotors();
+
+  int distance = getUSDistance();
+  if (distance > DISTANCE_SENS) {
+    obstacle_detected = false;
+    if (motorsActivated) updateBuggyMotors();
+    else stopMotors();
+  } else {
+    obstacle_detected = true;
+    stopMotors();
+  }
+  //Serial.print("Distance detected: ");
+  //Serial.print(distance);
+  //Serial.println(" cm");
   delay(50);
-} // loop()
+}  // loop()
