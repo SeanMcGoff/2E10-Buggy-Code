@@ -1,4 +1,5 @@
 #include "motors.h"
+#include <ArduinoJson.h>
 #include <WiFiS3.h>
 const char ssid[] = "edna";      // your network SSID (name)
 const char pass[] = "ednamode";  // your network password (use for WPA, or use as key for WEP)
@@ -21,13 +22,20 @@ const int LEYE = D12;
 const int REYE = D13;
 bool irState[2];
 
-//D2 is Echo
+// US Sensor Defs
 const int US_ECHO = 2;
 const int US_TRIG = 3;
 const int DISTANCE_SENS = 15;
 bool obstacle_detected = false;
 
 bool motorsActivated = false;  // Run Motor Code Flag
+
+// Wheel Encoder Defs
+const int LEFT_ENCODER = D4;
+const int RIGHT_ENCODER = D7;
+const double WHEEL_CIRCUMFRENCE = 6.3 * PI;
+bool encoderState[2] = {true, true};
+double wheelDistance = 0.0;
 
 unsigned long startTimer = millis(); // Timer Thing
 
@@ -52,6 +60,18 @@ void updateBuggyMotors() {
   }
 }
 
+void updateEncoders() {
+  bool leftState = digitalRead(LEFT_ENCODER);
+  bool rightState = digitalRead(LEFT_ENCODER);
+  if(leftState != encoderState[0]) {
+    encoderState[0] = leftState;
+    wheelDistance += WHEEL_CIRCUMFRENCE / 8;
+  }
+  if(rightState != encoderState[1]) {
+    encoderState[1] = rightState;
+    wheelDistance += WHEEL_CIRCUMFRENCE / 8;
+  }
+}
 
 void printWiFiStatus() {
   // print the SSID of the network you're attached to:
@@ -67,7 +87,6 @@ void printWiFiStatus() {
 
 // Starts the wifi module
 void startWiFi() {
-  Serial.begin(9600);
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
@@ -133,7 +152,10 @@ RequestStatus recieveRequest(WiFiClient client) {
         // PING CASE
         if (currentLine == "ping") {
           Serial.println("Ping");
-          client.write(obstacle_detected ? 1 : 0);
+          JsonDocument doc;
+          doc["obstacle_detected"] = obstacle_detected;
+          doc["distance_traveled"] = wheelDistance;
+          serializeJsonPretty(doc,client);
           return RequestStatus::UNDEFINED;
         }
         // BAD COMMAND CASE
@@ -165,9 +187,13 @@ void setup() {
   pinMode(RIGHT_MOTOR_DIRECTION[0], OUTPUT);
   pinMode(RIGHT_MOTOR_DIRECTION[1], OUTPUT);
 
-  // Ultrasonic Sensor Mode Defs
+  // Ultrasonic Sensor Modes
   pinMode(US_TRIG, OUTPUT);
   pinMode(US_ECHO, INPUT);
+
+  // Wheel Encoder Modes
+  pinMode(LEFT_ENCODER,INPUT_PULLUP);
+  pinMode(RIGHT_ENCODER,INPUT_PULLUP);
 
   startWiFi();  // Starts the wifi
 }
@@ -191,10 +217,18 @@ void loop() {
     startTimer = millis();
   }
 
+  updateEncoders();
+
+  Serial.print("Wheel Distance: ");
+  Serial.print(wheelDistance);
+  Serial.println(" cm.");
+
   int distance = getUSDistance();
   if (distance > DISTANCE_SENS) {
     obstacle_detected = false;
-    if (motorsActivated) updateBuggyMotors();
+    if (motorsActivated) {
+      updateBuggyMotors();
+    }
     else stopMotors();
   } else {
     obstacle_detected = true;
@@ -203,5 +237,5 @@ void loop() {
   //Serial.print("Distance detected: ");
   //Serial.print(distance);
   //Serial.println(" cm");
-  delay(50);
+  delay(10);
 }  // loop()
