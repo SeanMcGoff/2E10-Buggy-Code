@@ -1,23 +1,22 @@
-#ifndef MOTORS_H
-#define MOTORS_H
+#pragma once
+#ifndef motors_H
+#define motors_H
 #include <Arduino.h>
-const int LEFT_MOTOR_PWM = D6;
-const int RIGHT_MOTOR_PWM = D5;
+namespace Motors {
 
-// D8 and D9 Control Left Motor
-const int LEFT_MOTOR_DIRECTION[2] = {D9,D8};
+const int LEFT_PWM = D6;                    // Left Motor PWM Pin
+const int RIGHT_PWM = D5;                   // Right Motor PWM Pin
+const int LEFT_HBRIDGE[2] = { D9, D8 };     // Pins that Control Left Motor H-Bridge
+const int RIGHT_HBRIDGE[2] = { D10, D11 };  // Pins that Control Right Motor H-Bridge
 
-// D10 and D11 Control Right Motor
-const int RIGHT_MOTOR_DIRECTION[2] = {D10,D11};
+void leftForward(int speed);
+void leftBackward(int speed);
+void rightForward(int speed);
+void rightBackward(int speed);
+void leftStop();
+void rightStop();
+void bothStop();
 
-
-// Motor Function Defs
-void leftMotorForward(int speed);
-void leftMotorBackward(int speed);
-void rightMotorForward(int speed);
-void rightMotorBackward(int speed);
-void leftMotorStop();
-void rightMotorStop();
-void stopMotors();
+}
 
 #endif

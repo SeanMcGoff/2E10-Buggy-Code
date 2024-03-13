@@ -1,241 +1,165 @@
+#include "ir.h"
 #include "motors.h"
+#include "net.h"
+#include "ultrasonic.h"
+#include "wheel-encoders.h"
+
 #include <ArduinoJson.h>
-#include <WiFiS3.h>
-const char ssid[] = "edna";      // your network SSID (name)
-const char pass[] = "ednamode";  // your network password (use for WPA, or use as key for WEP)
 
-
-int status = WL_IDLE_STATUS;  // WIFI Status
-
-WiFiServer server(80);  // Server
-
-typedef enum RequestStatus {
-  START,
-  STOP,
-  UNDEFINED
-};
-
-int led = LED_BUILTIN;
-
-// IR Defs
-const int LEYE = D12;
-const int REYE = D13;
-bool irState[2];
-
-// US Sensor Defs
-const int US_ECHO = 2;
-const int US_TRIG = 3;
-const int DISTANCE_SENS = 15;
-bool obstacle_detected = false;
+bool obstacle_detected = false; // Obstacle Detected Flag
+unsigned long US_Trigger_Timer = millis();  // Loop For US Sensor Triggering
 
 bool motorsActivated = false;  // Run Motor Code Flag
 
-// Wheel Encoder Defs
-const int LEFT_ENCODER = D4;
-const int RIGHT_ENCODER = D7;
-const double WHEEL_CIRCUMFRENCE = 6.3 * PI;
-bool encoderState[2] = {true, true};
-double wheelDistance = 0.0;
+//PID constants
+double kp = 30;
+double ki = 0;
+double kd = 50;
 
-unsigned long startTimer = millis(); // Timer Thing
+unsigned long currentTime = 0;
+unsigned long previousTime = 0;
+double elapsedTime;
+double error;
+double lastError = 0;
+const double SetPoint = 15;
+double cumError, rateError;
+
+// ino-side Motor Vars
+const double MOTOR_CORRECTION = 0.85;
+int speed = 255;
+
+unsigned long Web_Timer = millis();  // Timer for Web
 
 void updateBuggyMotors() {
-  irState[0] = digitalRead(LEYE);
-  irState[1] = digitalRead(REYE);
-  if (irState[0] == HIGH && irState[1] == HIGH) {
+  IR::updateState();
+  if (IR::state[0] == HIGH && IR::state[1] == HIGH) {
     // On the white path
-    leftMotorForward(200);
-    rightMotorForward(180);
-  } else if (irState[0] == LOW && irState[1] == LOW) {
+    Motors::leftForward(speed);
+    Motors::rightForward(ceil(speed * MOTOR_CORRECTION));
+  } else if (IR::state[0] == LOW && IR::state[1] == LOW) {
     // Not on any path
-    stopMotors();
-  } else if (irState[0] == LOW && irState[1] == HIGH) {
+    Motors::bothStop();
+  } else if (IR::state[0] == LOW && IR::state[1] == HIGH) {
     // Turn Left
-    rightMotorForward(180);
-    leftMotorForward(0);
+    Motors::rightForward(ceil(speed * MOTOR_CORRECTION));
+    Motors::leftForward(0);
   } else {
     // Turn Right
-    leftMotorForward(200);
-    rightMotorForward(0);
+    Motors::leftForward(speed);
+    Motors::rightBackward(25);
   }
 }
 
-void updateEncoders() {
-  bool leftState = digitalRead(LEFT_ENCODER);
-  bool rightState = digitalRead(LEFT_ENCODER);
-  if(leftState != encoderState[0]) {
-    encoderState[0] = leftState;
-    wheelDistance += WHEEL_CIRCUMFRENCE / 8;
+void parseRequest(JsonDocument doc, WiFiClient client) {
+  String command = doc["command"];
+  // Start Command
+  if (command == "start") {
+    Serial.println("Start Motors");
+    motorsActivated = true;
   }
-  if(rightState != encoderState[1]) {
-    encoderState[1] = rightState;
-    wheelDistance += WHEEL_CIRCUMFRENCE / 8;
+  // Stop Command
+  else if (command == "stop") {
+    Serial.println("Stop Motors");
+    motorsActivated = false;
   }
-}
-
-void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-}
-
-
-// Starts the wifi module
-void startWiFi() {
-  // check for the WiFi module:
-  if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println("Communication with WiFi module failed!");
-    // don't continue
-    while (true)
-      ;
+  // Ping Command
+  else if (command == "ping") {
+    JsonDocument response_doc;
+    response_doc["obstacle_detected"] = obstacle_detected;
+    response_doc["distance_traveled"] = WheelEncoders::distanceTraveled;
+    response_doc["speed"] = speed;
+    serializeJsonPretty(response_doc, client);
   }
-
-  // print the network name (SSID);
-  Serial.print("Creating access point named: ");
-  Serial.println(ssid);
-
-  // Create open network. Change this line if you want to create an WEP network:
-  status = WiFi.beginAP(ssid, pass);
-  if (status != WL_AP_LISTENING) {
-    Serial.println("Creating access point failed");
-    while (true)
-      ;
+  // Set Speed command
+  else if (command == "setSpeed") {
+    double clientSpeed = doc["speed"];
+    Serial.print("Setting speed to: ");
+    Serial.println(clientSpeed);
+    speed = clientSpeed;
   }
-
-  // wait 10 seconds for connection:
-  delay(10000);
-
-  // start the web server on port 80
-  server.begin();
-
-  // you're connected now, so print out the status
-  printWiFiStatus();
-}
-
-int getUSDistance() {
-  long duration;
-  digitalWrite(US_TRIG, LOW);
-  delayMicroseconds(2);
-  digitalWrite(US_TRIG, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(US_TRIG, LOW);
-
-  duration = pulseIn(US_ECHO, HIGH);
-
-  return duration / 58;
-}
-
-RequestStatus recieveRequest(WiFiClient client) {
-  Serial.print("Recieving Request: ");  // print a message out the Serial port
-  String currentLine = "";       // make a String to hold incoming data from the client
-  if(client.connected()) {
-    delayMicroseconds(10);
-    while(client.available()) {
-      char c = client.read();
-      //Serial.print(c);
-      if (c == '\n') {
-        // START CASE
-        if(currentLine == "start") {
-          Serial.println("Start Motors");
-          return RequestStatus::START;
-        }
-        // STOP CASE
-        if(currentLine == "stop") {
-          Serial.println("Stop Motors");
-          return RequestStatus::STOP;
-        }
-        // PING CASE
-        if (currentLine == "ping") {
-          Serial.println("Ping");
-          JsonDocument doc;
-          doc["obstacle_detected"] = obstacle_detected;
-          doc["distance_traveled"] = wheelDistance;
-          serializeJsonPretty(doc,client);
-          return RequestStatus::UNDEFINED;
-        }
-        // BAD COMMAND CASE
-        Serial.println(" Bad Command");
-        return RequestStatus::UNDEFINED;
-        }
-      if (c != '\r') currentLine += c;
-    }
+  // If Incorrect / Empty Command
+  else {
+    Serial.println("Error: Bad Command");
   }
-  // In the weird case it gets heres
-  return RequestStatus::UNDEFINED;
 }
 
 void setup() {
   Serial.begin(9600);
 
-  pinMode(led, OUTPUT);  // set the LED pin mode
-  // Set IR Sensor pin modes
-  pinMode(LEYE, INPUT);
-  pinMode(REYE, INPUT);
+  // Set IR Sensor Pin Modes
+  pinMode(IR::LEYE, INPUT);
+  pinMode(IR::LEYE, INPUT);
 
-  // Set PWM Motor Speed
-  pinMode(LEFT_MOTOR_PWM, OUTPUT);
-  pinMode(RIGHT_MOTOR_PWM, OUTPUT);
+  // Set PWM Pin Modes
+  pinMode(Motors::LEFT_PWM, OUTPUT);
+  pinMode(Motors::LEFT_PWM, OUTPUT);
 
-  // Direction Output
-  pinMode(LEFT_MOTOR_DIRECTION[0], OUTPUT);
-  pinMode(LEFT_MOTOR_DIRECTION[1], OUTPUT);
-  pinMode(RIGHT_MOTOR_DIRECTION[0], OUTPUT);
-  pinMode(RIGHT_MOTOR_DIRECTION[1], OUTPUT);
+  // Set H-Bridge Pin Modes
+  pinMode(Motors::LEFT_HBRIDGE[0], OUTPUT);
+  pinMode(Motors::LEFT_HBRIDGE[1], OUTPUT);
+  pinMode(Motors::RIGHT_HBRIDGE[0], OUTPUT);
+  pinMode(Motors::RIGHT_HBRIDGE[1], OUTPUT);
 
-  // Ultrasonic Sensor Modes
-  pinMode(US_TRIG, OUTPUT);
-  pinMode(US_ECHO, INPUT);
+  // Set US Pin Modes
+  pinMode(US::TRIG, OUTPUT);
+  pinMode(US::ECHO, INPUT_PULLUP);
 
-  // Wheel Encoder Modes
-  pinMode(LEFT_ENCODER,INPUT_PULLUP);
-  pinMode(RIGHT_ENCODER,INPUT_PULLUP);
+  // Set US Interrupts
+  attachInterrupt(digitalPinToInterrupt(US::ECHO), US::Echo_Rising, RISING);
+  attachInterrupt(digitalPinToInterrupt(US::ECHO), US::Echo_Falling, FALLING);
 
-  startWiFi();  // Starts the wifi
+  // Set Wheel Encoder Pin Modes
+  pinMode(WheelEncoders::LEFT, INPUT_PULLUP);
+  pinMode(WheelEncoders::RIGHT, INPUT_PULLUP);
+
+  Net::startWiFi();  // Start the WiFi
+}
+
+int computePID(long distance) {
+  currentTime = millis();                              //get current time
+  elapsedTime = (double)(currentTime - previousTime);  //compute time elapsed from previous computation
+
+  error = (US::getCurrentDistance() - SetPoint);  // determine error
+  cumError += error * elapsedTime;                // compute integral
+  rateError = (error - lastError) / elapsedTime;  // compute derivative
+
+  int out = kp * error + ki * cumError + kd * rateError;  //PID output
+
+  out = constrain(out, 0, 255);
+
+  lastError = error;           //remember current error
+  previousTime = currentTime;  //remember current time
+
+  return out;  //have function return the PID output
 }
 
 void loop() {
-  if(millis() - startTimer >= 250) {
-    WiFiClient client = server.available();  // listen for incoming clients
+
+  if (millis() - Web_Timer >= 500) {
+    WiFiClient client = Net::server.available();  // listen for incoming clients
     if (client && client.available()) {
-      RequestStatus status = recieveRequest(client);
-      switch (status) {
-        case RequestStatus::START:
-          motorsActivated = true;
-          break;
-        case RequestStatus::STOP:
-          motorsActivated = false;
-          break;
-        case RequestStatus::UNDEFINED:
-          break;
-      }
+      JsonDocument doc = Net::recieveBuggyData(client);
+      parseRequest(doc, client);
     }
-    startTimer = millis();
+    Web_Timer = millis();
   }
 
-  updateEncoders();
+  WheelEncoders::update(); // Update the Wheel Encoders
 
-  Serial.print("Wheel Distance: ");
-  Serial.print(wheelDistance);
-  Serial.println(" cm.");
+  obstacle_detected = US::getCurrentDistance() <= US::DISTANCE_SENS;
 
-  int distance = getUSDistance();
-  if (distance > DISTANCE_SENS) {
-    obstacle_detected = false;
-    if (motorsActivated) {
-      updateBuggyMotors();
-    }
-    else stopMotors();
+  if (millis() - US_Trigger_Timer >= 250) {
+    US::Trigger();
+    US_Trigger_Timer = millis();
+  }
+
+  speed = computePID(US::getCurrentDistance());
+
+  if (motorsActivated) {
+    updateBuggyMotors();
   } else {
-    obstacle_detected = true;
-    stopMotors();
+    Motors::bothStop();
+    WheelEncoders::distanceTraveled = 0;
   }
-  //Serial.print("Distance detected: ");
-  //Serial.print(distance);
-  //Serial.println(" cm");
-  delay(10);
+
 }  // loop()

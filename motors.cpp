@@ -1,40 +1,40 @@
 #include "motors.h"
 
-void leftMotorForward(int speed) {
-  digitalWrite(LEFT_MOTOR_DIRECTION[0],HIGH);
-  digitalWrite(LEFT_MOTOR_DIRECTION[1],LOW);
-  analogWrite(LEFT_MOTOR_PWM,speed);
+void Motors::leftForward(int speed) {
+  digitalWrite(LEFT_HBRIDGE[0], HIGH);
+  digitalWrite(LEFT_HBRIDGE[1], LOW);
+  analogWrite(LEFT_PWM, speed);
 }
 
-void leftMotorBackward(int speed) {
-  digitalWrite(LEFT_MOTOR_DIRECTION[0],LOW);
-  digitalWrite(LEFT_MOTOR_DIRECTION[1],HIGH);
-  analogWrite(LEFT_MOTOR_PWM,speed);
+void Motors::leftBackward(int speed) {
+  digitalWrite(LEFT_HBRIDGE[0], LOW);
+  digitalWrite(LEFT_HBRIDGE[1], HIGH);
+  analogWrite(LEFT_PWM, speed);
 }
 
-void rightMotorForward(int speed) {
-  digitalWrite(RIGHT_MOTOR_DIRECTION[0],HIGH);
-  digitalWrite(RIGHT_MOTOR_DIRECTION[1],LOW);
-  analogWrite(RIGHT_MOTOR_PWM,speed);
+void Motors::rightForward(int speed) {
+  digitalWrite(RIGHT_HBRIDGE[0], HIGH);
+  digitalWrite(RIGHT_HBRIDGE[1], LOW);
+  analogWrite(RIGHT_PWM, speed);
 }
 
-void rightMotorBackward(int speed) {
-  digitalWrite(RIGHT_MOTOR_DIRECTION[0],LOW);
-  digitalWrite(RIGHT_MOTOR_DIRECTION[1],HIGH);
-  analogWrite(RIGHT_MOTOR_PWM,speed);
+void Motors::rightBackward(int speed) {
+  digitalWrite(RIGHT_HBRIDGE[0], LOW);
+  digitalWrite(RIGHT_HBRIDGE[1], HIGH);
+  analogWrite(RIGHT_PWM, speed);
 }
 
-void leftMotorStop() {
-  digitalWrite(LEFT_MOTOR_DIRECTION[0],LOW);
-  digitalWrite(LEFT_MOTOR_DIRECTION[1],LOW); 
+void Motors::leftStop() {
+  digitalWrite(LEFT_HBRIDGE[0], LOW);
+  digitalWrite(LEFT_HBRIDGE[1], LOW);
 }
 
-void rightMotorStop() {
-  digitalWrite(RIGHT_MOTOR_DIRECTION[0],LOW);
-  digitalWrite(RIGHT_MOTOR_DIRECTION[1],LOW); 
+void Motors::rightStop() {
+  digitalWrite(RIGHT_HBRIDGE[0], LOW);
+  digitalWrite(RIGHT_HBRIDGE[1], LOW);
 }
 
-void stopMotors() {
-  leftMotorStop();
-  rightMotorStop();
+void Motors::bothStop() {
+  Motors::leftStop();
+  Motors::rightStop();
 }
