@@ -11,13 +11,13 @@ const int TRIG = D3;  // Trigger Pin Def
 
 const int DISTANCE_SENS = 15;  // Distance Sensitivity
 
-extern volatile long echo_timer;  // Timer for Echo
-extern volatile long distance_v;  // Distance Recorded Last by Ultrasonic Sensor
+extern volatile long echo_timer;    // Timer for Echo
+extern volatile double distance_v;  // Distance Recorded Last by Ultrasonic Sensor
 
-void Trigger();
-void Echo_Rising();
-void Echo_Falling();
-long getCurrentDistance();
+void Trigger();               // Send 10µs signal out from Trigger Pin
+void Echo_Rising();           // Interrupt Function to be called on rising edge of Echo Pin
+void Echo_Falling();          // Interrupt Function to be called on falling edge of Echo Pin
+double getCurrentDistance();  // Returns non-volatile distance using atomics
 
 }
 

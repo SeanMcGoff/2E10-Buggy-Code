@@ -1,5 +1,7 @@
 #include "motors.h"
 
+bool Motors::activated = false;
+
 void Motors::leftForward(int speed) {
   digitalWrite(LEFT_HBRIDGE[0], HIGH);
   digitalWrite(LEFT_HBRIDGE[1], LOW);

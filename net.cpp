@@ -14,12 +14,13 @@ void Net::startWiFi() {
       ;
   }
 
-  // print the network name (SSID);
+  // print the network name
   Serial.print("Creating access point named: ");
   Serial.println(Net::WIFI_SSID);
 
   // Create open network
   Net::status = WiFi.beginAP(Net::WIFI_SSID, Net::WIFI_PASS);
+
   // Fail Case of Creating Access Point
   if (Net::status != WL_AP_LISTENING) {
     Serial.println("Creating access point failed");
@@ -33,7 +34,7 @@ void Net::startWiFi() {
   // Start the web server
   Net::server.begin();
 
-  // you're connected now, so print out the status
+  // Print out status post-connection
   printWiFiStatus();
 }
 
@@ -50,8 +51,11 @@ void Net::printWiFiStatus() {
 
 JsonDocument Net::recieveBuggyData(WiFiClient client) {
   JsonDocument doc;
+  // Sanity Check for if client is still connected between calling the function and the function running
   if (client.connected()) {
+    // Recieve JSON from WiFicClient
     DeserializationError err = deserializeJson(doc, client);
+    // Error Case
     if (err) {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(err.c_str());

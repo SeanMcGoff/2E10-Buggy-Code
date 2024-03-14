@@ -1,7 +1,7 @@
 #include "ultrasonic.h"
 
 volatile long US::echo_timer;  // Timer for Echo
-volatile long US::distance_v;  // Distance Recorded Last by Ultrasonic Sensor
+volatile double US::distance_v;  // Distance Recorded Last by Ultrasonic Sensor
 
 
 void US::Trigger() {
@@ -22,9 +22,8 @@ void US::Echo_Falling() {
     US::echo_timer = 0;
   }
 }
-
-long US::getCurrentDistance() {
-  long distance;
+double US::getCurrentDistance() {
+  double distance;
   ATOMIC() {
     distance = US::distance_v;  // Atomic Block avoids interrupts
   }

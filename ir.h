@@ -5,11 +5,12 @@
 
 namespace IR {
 
-const int LEYE = D12;
-const int REYE = D13;
-extern bool state[2];
+const int LEYE = D12;  // Left IR Sensor Pin
+const int REYE = D13;  // Right IR Sensor Pin
 
-void updateState();
+extern bool state[2];  // Current IR State (defined in ir.cpp)
+
+void updateState();  // update IR::state
 
 }
 

@@ -20,5 +20,4 @@ void WheelEncoders::update() {
     WheelEncoders::state[1] = rightState;
     WheelEncoders::distanceTraveled += WheelEncoders::CIRCUMFRENCE / 8;
   }
-  
 }
