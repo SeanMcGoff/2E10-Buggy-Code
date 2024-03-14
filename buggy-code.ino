@@ -1,9 +1,9 @@
-#include "ir.h"
-#include "motors.h"
-#include "net.h"
-#include "pid.h"
-#include "ultrasonic.h"
-#include "wheel-encoders.h"
+#include "src/ir.h"
+#include "src/motors.h"
+#include "src/net.h"
+#include "src/pid.h"
+#include "src/ultrasonic.h"
+#include "src/wheel-encoders.h"
 
 #include <ArduinoJson.h>
 
