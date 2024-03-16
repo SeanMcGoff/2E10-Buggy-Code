@@ -1,0 +1,20 @@
+# This file automatically tests compilation of the code on update
+name: Arduino CI
+run-name: Testing ${{ github.actor }}s latest Commit
+on: [push]
+jobs:
+  Arduino-CI:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+      - name: Install Arduino CLI
+        run: curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+      - name: Install UNO R4 Platform
+        run: ./bin/arduino-cli core install arduino:renesas_uno
+      - name: Install Needed Arduino Libraries
+        run: ./bin/arduino-cli lib install ArduinoJson PID SimplyAtomic StreamUtils
+      - name: Compile Arduino Sketch
+        run: ./bin/arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi 2E10-Buggy-Code.ino
+      - name: Output Status
+        run: echo "The compilation status is ${{ job.status }}."

@@ -1,0 +1,1 @@
+arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi 2E10-Buggy-Code.ino
