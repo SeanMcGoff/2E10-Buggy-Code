@@ -1,3 +1,5 @@
+![Arduino CI](https://github.com/SeanMcGoff/2E10-Buggy-Code/actions/workflows/test-compilation.yaml/badge.svg)
+
 # 2E10 Buggy Code
 Group: X12
 Members: 
