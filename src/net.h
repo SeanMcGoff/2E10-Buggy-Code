@@ -3,6 +3,7 @@
 #define net_H
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <StreamUtils.h>
 #include <WiFiS3.h>
 
 namespace Net {

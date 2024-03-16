@@ -13,7 +13,7 @@ jobs:
       - name: Install UNO R4 Platform
         run: ./bin/arduino-cli core install arduino:renesas_uno
       - name: Install Needed Arduino Libraries
-        run: ./bin/arduino-cli lib install ArduinoJson && ./bin/arduino-cli lib install SimplyAtomic
+        run: ./bin/arduino-cli lib install ArduinoJson PID SimplyAtomic StreamUtils
       - name: Compile Arduino Sketch
         run: ./bin/arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi 2E10-Buggy-Code.ino
       - name: Output Status

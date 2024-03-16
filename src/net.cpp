@@ -1,4 +1,3 @@
-#include "WiFiClient.h"
 #include "net.h"
 
 int Net::status = WL_IDLE_STATUS;
@@ -54,7 +53,9 @@ JsonDocument Net::recieveBuggyData(WiFiClient client) {
   // Sanity Check for if client is still connected between calling the function and the function running
   if (client.connected()) {
     // Recieve JSON from WiFicClient
-    DeserializationError err = deserializeJson(doc, client);
+    ReadLoggingStream loggingStream(client, Serial);
+    DeserializationError err = deserializeJson(doc, loggingStream);
+    Serial.println("");
     // Error Case
     if (err) {
       Serial.print(F("deserializeJson() failed: "));
