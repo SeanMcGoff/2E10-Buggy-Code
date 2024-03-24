@@ -9,7 +9,7 @@ const int RIGHT_PWM = D5;                   // Right Motor PWM Pin
 const int LEFT_HBRIDGE[2] = { D9, D8 };     // Pins that Control Left Motor H-Bridge
 const int RIGHT_HBRIDGE[2] = { D10, D11 };  // Pins that Control Right Motor H-Bridge
 
-const double CORRECTION = 0.85;  // Correction Factor for Left/Right Motors
+const double CORRECTION = 0.6;  // Correction Factor for Left/Right Motors
 
 extern bool activated;  // On-Off Flag for Motors (Toggled by GUI)
 

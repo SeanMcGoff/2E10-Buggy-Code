@@ -9,8 +9,6 @@ namespace US {
 const int ECHO = D2;  // Echo Pin Def
 const int TRIG = D3;  // Trigger Pin Def
 
-const int DISTANCE_SENS = 15;  // Distance Sensitivity
-
 extern volatile long echo_timer;    // Timer for Echo
 extern volatile double distance_v;  // Distance Recorded Last by Ultrasonic Sensor
 

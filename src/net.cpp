@@ -1,3 +1,5 @@
+#include <sys/_intsup.h>
+#include "api/Common.h"
 #include "net.h"
 
 int Net::status = WL_IDLE_STATUS;
@@ -49,18 +51,19 @@ void Net::printWiFiStatus() {
 }
 
 JsonDocument Net::recieveBuggyData(WiFiClient client) {
+  
   JsonDocument doc;
   // Sanity Check for if client is still connected between calling the function and the function running
   if (client.connected()) {
     // Recieve JSON from WiFicClient
-    ReadLoggingStream loggingStream(client, Serial);
-    DeserializationError err = deserializeJson(doc, loggingStream);
-    Serial.println("");
+    //ReadLoggingStream loggingStream(client, Serial);
+    DeserializationError err = deserializeJson(doc, client);
     // Error Case
     if (err) {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(err.c_str());
     }
   }
+  
   return doc;
 }

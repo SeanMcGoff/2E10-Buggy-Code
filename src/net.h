@@ -15,6 +15,7 @@ const int SERVER_PORT = 80;           // Server Port
 extern int status;         // WIFI Status
 extern WiFiServer server;  // Server
 
+
 void startWiFi();                                  // Start WiFi using UNO R4 Access Point
 void printWiFiStatus();                            // Print out WiFi Status
 JsonDocument recieveBuggyData(WiFiClient client);  // Recieve data from Client Stream + Deserializes JSON
