@@ -1,3 +1,4 @@
+#include "src/camera.h"
 #include "src/ir.h"
 #include "src/motors.h"
 #include "src/net.h"
@@ -136,6 +137,7 @@ void setup() {
   pinMode(WheelEncoders::LEFT, INPUT_PULLUP);
   pinMode(WheelEncoders::RIGHT, INPUT_PULLUP);
 
+  Camera::start();   // Start the Camera
   Net::startWiFi();  // Start the WiFi
 }  // setup()
 
@@ -162,7 +164,6 @@ void controlStrategy2() {
 
 void loop() {
   // Check for Client Request 250 Milliseconds
-
   if (millis() - Web_Timer >= 500) {
     WiFiClient client = Net::server.available();  // listen for incoming clients
     if (client && client.available()) {
@@ -172,9 +173,6 @@ void loop() {
     Web_Timer = millis();
   }
 
-
-
-
   // Trigger US Sensor Every 250 Milliseconds
   if (millis() - US_Trigger_Timer >= 250) {
     US::Trigger();
@@ -183,13 +181,11 @@ void loop() {
 
   double currentUSDistance = US::getCurrentDistance();
 
-
   Pid::enabled = currentUSDistance <= Pid::ENABLING_DISTANCE;
   Pid::Input = currentUSDistance - Pid::SetPoint;  // Calculate new PID Input
   Pid::buggyPID.Compute();                         // Compute new Output
 
   obstacle_detected = currentUSDistance <= Pid::SetPoint;  // Update Obstacle Detection
-
 
   WheelEncoders::update();                                                                                                    // Update the Wheel Encoders
   if (!!Motors::activated || obstacle_detected || (IR::state[0] == LOW && IR::state[1] == LOW)) WheelEncoders::velocity = 0;  // I hate this line so much
