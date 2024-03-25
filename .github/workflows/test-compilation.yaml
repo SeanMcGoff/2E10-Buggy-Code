@@ -17,7 +17,7 @@ jobs:
       - name: Get HUSKYLENS Library From Internet
         run:  wget https://raw.githubusercontent.com/HuskyLens/HUSKYLENSArduino/master/HUSKYLENS.zip
       - name: Install HUSKYLENS Library
-        run: arduino-cli config init && arduino-cli config set library.enable_unsafe_install true && arduino-cli lib install --zip-path HUSKYLENS.zip
+        run: ./bin/arduino-cli config init && ./bin/arduino-cli config set library.enable_unsafe_install true && ./bin/arduino-cli lib install --zip-path HUSKYLENS.zip
       - name: Compile Arduino Sketch
         run: ./bin/arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi 2E10-Buggy-Code.ino
       - name: Output Status
