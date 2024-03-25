@@ -26,7 +26,8 @@ void WheelEncoders::update() {
     WheelEncoders::distanceTraveled += WheelEncoders::CIRCUMFRENCE / 8;
   }
 
-  WheelEncoders::velocity = 10000 * (WheelEncoders::distanceTraveled - lastDistance) / (micros() - lastUpdate);
+  double newV = 10000 * (WheelEncoders::distanceTraveled - lastDistance) / (micros() - lastUpdate);
+  if(newV != 0) WheelEncoders::velocity = newV;
   lastUpdate = micros();
 
 }

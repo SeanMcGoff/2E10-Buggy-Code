@@ -7,11 +7,10 @@
 
 #include <ArduinoJson.h>
 
-bool obstacle_detected = false;             // Obstacle Detected Flag
-unsigned long US_Trigger_Timer = millis();  // Loop For US Sensor Processing
-unsigned long Web_Timer = millis();         // Timer for Web Processing
-unsigned long Wheel_Encoder_Timer = millis();
-unsigned long loop_timer = millis();
+bool obstacle_detected = false;                // Obstacle Detected Flag
+unsigned long US_Trigger_Timer = millis();     // Loop For US Sensor Processing
+unsigned long Web_Timer = millis();            // Timer for Web Processing
+unsigned long Wheel_Encoder_Timer = millis();  // Timer for Wheel Encoder
 
 double speed_coeff = 1;  // Speed coefficient (defined by GUI)
 bool manual_override = false;
@@ -22,7 +21,7 @@ void updateBuggyMotors(bool isPid) {
   IR::updateState();
   int lMotor, rMotor;
   int lMotorBack, rMotorBack;
-  if(isPid) {
+  if (isPid) {
     lMotor = Pid::Output;
     rMotor = ceil(Pid::Output * Motors::CORRECTION);
     //lMotorBack =  ceil(Pid::Output * 0.1);
@@ -30,7 +29,7 @@ void updateBuggyMotors(bool isPid) {
   } else {
     lMotor = ceil(200 * speed_coeff);
     rMotor = ceil(200 * Motors::CORRECTION * speed_coeff);
-    //lMotorBack = ceil(25 * speed_coeff); 
+    //lMotorBack = ceil(25 * speed_coeff);
     //rMotorBack = ceil(50 * speed_coeff * Motors::CORRECTION);
   }
 
@@ -141,11 +140,10 @@ void setup() {
 }  // setup()
 
 void controlStrategy1() {
-  if(!obstacle_detected && Motors::activated) {
+  if (!obstacle_detected && Motors::activated) {
     // Update Buggy Motors
     updateBuggyMotors(false);
-  }  
-  else {
+  } else {
     // If motors are deactivated or obstacle detected, stop motors and reset distance traveled
     Motors::bothStop();
     WheelEncoders::distanceTraveled = 0;
@@ -164,18 +162,17 @@ void controlStrategy2() {
 
 void loop() {
   // Check for Client Request 250 Milliseconds
-  
+
   if (millis() - Web_Timer >= 500) {
     WiFiClient client = Net::server.available();  // listen for incoming clients
     if (client && client.available()) {
       JsonDocument doc = Net::recieveBuggyData(client);
       parseGUIRequest(doc, client);
-      
     }
     Web_Timer = millis();
   }
-  
-  
+
+
 
 
   // Trigger US Sensor Every 250 Milliseconds
@@ -185,7 +182,7 @@ void loop() {
   }
 
   double currentUSDistance = US::getCurrentDistance();
-  
+
 
   Pid::enabled = currentUSDistance <= Pid::ENABLING_DISTANCE;
   Pid::Input = currentUSDistance - Pid::SetPoint;  // Calculate new PID Input
@@ -193,16 +190,11 @@ void loop() {
 
   obstacle_detected = currentUSDistance <= Pid::SetPoint;  // Update Obstacle Detection
 
-  
-  if (millis() - Wheel_Encoder_Timer >= 50) {
-    WheelEncoders::update();  // Update the Wheel Encoders
-    Wheel_Encoder_Timer = millis();
-  }
-  if(!!Motors::activated || obstacle_detected) WheelEncoders::velocity = 0;
-  
-  Serial.println(WheelEncoders::velocity);
-  
-  if(!manual_override && Pid::enabled) {
+
+  WheelEncoders::update();                                                                                                    // Update the Wheel Encoders
+  if (!!Motors::activated || obstacle_detected || (IR::state[0] == LOW && IR::state[1] == LOW)) WheelEncoders::velocity = 0;  // I hate this line so much
+
+  if (!manual_override && Pid::enabled) {
     controlStrategy2();
   } else {
     controlStrategy1();
