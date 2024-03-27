@@ -1,5 +1,6 @@
 #include "src/camera.h"
 #include "src/ir.h"
+#include "src/ledmatrix.h"
 #include "src/motors.h"
 #include "src/net.h"
 #include "src/pid.h"
@@ -8,7 +9,7 @@
 
 #include <ArduinoJson.h>
 
-bool obstacle_detected = false;                // Obstacle Detected Flag
+bool obstacle_detected = false;  // Obstacle Detected Flag
 unsigned long Husky_Timer = millis();
 unsigned long US_Trigger_Timer = millis();     // Loop For US Sensor Processing
 unsigned long Web_Timer = millis();            // Timer for Web Processing
@@ -133,8 +134,9 @@ void setup() {
   pinMode(WheelEncoders::LEFT, INPUT_PULLUP);
   pinMode(WheelEncoders::RIGHT, INPUT_PULLUP);
 
-  Camera::start();   // Start the Camera
-  Net::startWiFi();  // Start the WiFi
+  LED_Matrix::start();  // Start the LED Matrix
+  Camera::start();      // Start the Camera
+  Net::startWiFi();     // Start the WiFi
 }  // setup()
 
 void controlStrategy1() {
@@ -175,8 +177,22 @@ void loop() {
     US_Trigger_Timer = millis();
   }
 
-  if(millis() - Husky_Timer >= 250) {
+  if (millis() - Husky_Timer >= 250) {
     Camera::updateMostRecentTag();
+    switch (Camera::mostRecentTag) {
+      case Camera::TAG::LEFT:
+        LED_Matrix::left();
+        break;
+      case Camera::TAG::RIGHT:
+        LED_Matrix::right();
+        break;
+      case Camera::TAG::SLOW:
+        LED_Matrix::slow();
+        break;
+      case Camera::TAG::MAXSPEED:
+        LED_Matrix::fast();
+        break;
+    }
   }
 
   double currentUSDistance = US::getCurrentDistance();
