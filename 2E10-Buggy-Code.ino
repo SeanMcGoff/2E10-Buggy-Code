@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 
 bool obstacle_detected = false;                // Obstacle Detected Flag
+unsigned long Husky_Timer = millis();
 unsigned long US_Trigger_Timer = millis();     // Loop For US Sensor Processing
 unsigned long Web_Timer = millis();            // Timer for Web Processing
 unsigned long Wheel_Encoder_Timer = millis();  // Timer for Wheel Encoder
@@ -25,13 +26,9 @@ void updateBuggyMotors(bool isPid) {
   if (isPid) {
     lMotor = Pid::Output;
     rMotor = ceil(Pid::Output * Motors::CORRECTION);
-    //lMotorBack =  ceil(Pid::Output * 0.1);
-    //rMotorBack = ceil(Pid::Output * 0.1 * Motors::CORRECTION);
   } else {
     lMotor = ceil(200 * speed_coeff);
     rMotor = ceil(200 * Motors::CORRECTION * speed_coeff);
-    //lMotorBack = ceil(25 * speed_coeff);
-    //rMotorBack = ceil(50 * speed_coeff * Motors::CORRECTION);
   }
 
   if (IR::state[0] == HIGH && IR::state[1] == HIGH) {
@@ -56,8 +53,6 @@ void updateBuggyMotors(bool isPid) {
 void parseGUIRequest(JsonDocument doc, WiFiClient client) {
 
   String command = doc["command"];
-  //Serial.print("Command Recieved: ");
-  //Serial.println(command);
 
   // Start Command
   if (command == "start") {
@@ -78,7 +73,8 @@ void parseGUIRequest(JsonDocument doc, WiFiClient client) {
     response_doc["distance_from_object"] = US::getCurrentDistance();
     response_doc["distance_traveled"] = WheelEncoders::distanceTraveled;
     response_doc["measured_speed"] = WheelEncoders::velocity;
-    response_doc["obstacle_detected"] = Pid::enabled;
+    response_doc["obstacle_detected"] = obstacle_detected;
+    response_doc["tag_recognised"] = static_cast<int>(Camera::mostRecentTag);
 
     String o;
     serializeJson(response_doc, o);
@@ -179,6 +175,10 @@ void loop() {
     US_Trigger_Timer = millis();
   }
 
+  if(millis() - Husky_Timer >= 250) {
+    Camera::updateMostRecentTag();
+  }
+
   double currentUSDistance = US::getCurrentDistance();
 
   Pid::enabled = currentUSDistance <= Pid::ENABLING_DISTANCE;
@@ -187,8 +187,8 @@ void loop() {
 
   obstacle_detected = currentUSDistance <= Pid::SetPoint;  // Update Obstacle Detection
 
-  WheelEncoders::update();                                                                                                    // Update the Wheel Encoders
-  if (!!Motors::activated || obstacle_detected || (IR::state[0] == LOW && IR::state[1] == LOW)) WheelEncoders::velocity = 0;  // I hate this line so much
+  WheelEncoders::update();                                                                                                       // Update the Wheel Encoders
+  if (!Motors::activated || obstacle_detected || ((IR::state[0] == LOW) && (IR::state[1] == LOW))) WheelEncoders::velocity = 0;  // I hate this line so much
 
   if (!manual_override && Pid::enabled) {
     controlStrategy2();

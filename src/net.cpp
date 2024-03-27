@@ -1,5 +1,3 @@
-#include <sys/_intsup.h>
-#include "api/Common.h"
 #include "net.h"
 
 int Net::status = WL_IDLE_STATUS;
