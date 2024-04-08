@@ -1,4 +1,5 @@
 #include "src/camera.h"
+#include "src/chacha.h"
 #include "src/ir.h"
 #include "src/ledmatrix.h"
 #include "src/motors.h"
@@ -14,31 +15,21 @@ unsigned long Husky_Timer = millis();
 unsigned long US_Trigger_Timer = millis();     // Loop For US Sensor Processing
 unsigned long Web_Timer = millis();            // Timer for Web Processing
 unsigned long Wheel_Encoder_Timer = millis();  // Timer for Wheel Encoder
+unsigned long Cha_Cha_Timer = millis();
 
 double speed_coeff = 1;  // Speed coefficient (defined by GUI)
 bool manual_override = false;
 
 
-// Updates the Buggy's Motors Given IR State
-void updateBuggyMotors(bool isPid) {
-  IR::updateState();
-  int lMotor, rMotor;
-  int lMotorBack, rMotorBack;
-  if (isPid) {
-    lMotor = Pid::Output;
-    rMotor = ceil(Pid::Output * Motors::CORRECTION);
-  } else {
-    lMotor = ceil(200 * speed_coeff);
-    rMotor = ceil(200 * Motors::CORRECTION * speed_coeff);
-  }
-
+// Buggy update code if buggy is not at a junction
+void noJunctionUpdateBuggy(int lMotor, int rMotor) {
   if (IR::state[0] == HIGH && IR::state[1] == HIGH) {
     // On the white path
     Motors::leftForward(lMotor);
     Motors::rightForward(rMotor);
   } else if (IR::state[0] == LOW && IR::state[1] == LOW) {
-    // Not on any path
-    Motors::bothStop();
+    // Both are on white (at junction)
+    Motors::onJunction = true;
   } else if (IR::state[0] == LOW && IR::state[1] == HIGH) {
     // Turn Left
     Motors::rightForward(lMotor);
@@ -48,6 +39,48 @@ void updateBuggyMotors(bool isPid) {
     Motors::leftForward(lMotor);
     Motors::rightStop();
   }
+}
+
+// Buggy update Code if buggy is at a junction
+void junctionUpdateBuggy(int lMotor, int rMotor) {
+  // Turn left or right given most recent direction-related aprilTag
+  switch (Camera::junctionTurnDirection) {
+    case Camera::TAG::LEFT:
+      Motors::rightForward(lMotor);
+      Motors::leftBackward(rMotor);
+      break;
+    case Camera::TAG::RIGHT:
+      Motors::leftForward(lMotor);
+      Motors::rightBackward(rMotor);
+      break;
+  }
+
+}
+
+// Updates the Buggy's Motors Given IR State
+void updateBuggyMotors(bool isPid) {
+  IR::updateState();
+
+  int lMotor, rMotor;
+  // Determine Motor Speeds
+  if (isPid) {
+    lMotor = Pid::Output;
+    rMotor = ceil(Pid::Output * Motors::CORRECTION);
+  } else if(Camera::isSpeedLimited) {
+    lMotor = ceil(200 * Camera::SPEED_LIMIT_COEFF);
+    rMotor = ceil(200 * Motors::CORRECTION * Camera::SPEED_LIMIT_COEFF);
+  } else {
+    lMotor = ceil(200 * speed_coeff);
+    rMotor = ceil(200 * Motors::CORRECTION * speed_coeff);
+  }
+
+  // If in junction mode and not on junction anymore, resume to normal function
+  if (Motors::onJunction && IR::state[0] == HIGH && IR::state[1] == HIGH) {
+    Motors::onJunction = false;
+  }
+  // Update Buggy Motors given junction state
+  if (Motors::onJunction) junctionUpdateBuggy(lMotor, rMotor);
+  else noJunctionUpdateBuggy(lMotor, rMotor);
 }
 
 // Parse JSON from GUI and preform relevant function
@@ -160,6 +193,68 @@ void controlStrategy2() {
   }
 }
 
+void slideThatShit() {
+  if(ChaCha::firstEnable) {
+    Cha_Cha_Timer = millis();
+    ChaCha::beatNum = 0;
+    ChaCha::firstEnable = false;
+  }
+  if(millis() - Cha_Cha_Timer >= ChaCha::MS_PER_BEAT) {
+    Cha_Cha_Timer = millis();
+    ChaCha::beatNum++;
+
+    // Escape at end of song
+    if(ChaCha::beatNum >= ChaCha::SLIDE_SEQUENCE_SIZE) {
+      Camera::slideMode = false;
+      ChaCha::firstEnable = true;
+      return;
+    }
+    
+    Serial.println(ChaCha::beatNum);
+    Serial.println(ChaCha::SLIDE_SEQUENCE[ChaCha::beatNum]);
+    // The actual commands
+    switch(ChaCha::SLIDE_SEQUENCE[ChaCha::beatNum]) {
+      case ChaCha::COMMANDS::NOTHING:
+        Motors::bothStop();
+        LED_Matrix::clear();
+        break;
+      case ChaCha::COMMANDS::FLASH:
+        LED_Matrix::flash();
+        break;
+      case ChaCha::COMMANDS::CLAPON:
+        LED_Matrix::clap();
+        break;
+      case ChaCha::COMMANDS::CLAPOFF:
+        LED_Matrix::clear();
+        break;
+      case ChaCha::COMMANDS::FORWARD:
+        Motors::leftForward(255);
+        Motors::rightForward(255);
+        break;
+      case ChaCha::COMMANDS::BACK:
+        Motors::leftBackward(255);
+        Motors::rightBackward(255);  
+        break;     
+      case ChaCha::COMMANDS::LEFT:
+        Motors::leftStop();
+        Motors::rightForward(255);  
+        break; 
+      case ChaCha::COMMANDS::RIGHT:
+        Motors::leftForward(255);
+        Motors::rightStop();  
+        break;  
+      case ChaCha::COMMANDS::CHACHALEFT:
+        Motors::leftBackward(100);
+        Motors::rightForward(200);
+        break;
+      case ChaCha::COMMANDS::CHACHARIGHT:
+        Motors::leftForward(200);
+        Motors::rightBackward(100);
+        break;
+    }
+  }
+}
+
 void loop() {
   // Check for Client Request 250 Milliseconds
   if (millis() - Web_Timer >= 500) {
@@ -206,7 +301,12 @@ void loop() {
   WheelEncoders::update();                                                                                                       // Update the Wheel Encoders
   if (!Motors::activated || obstacle_detected || ((IR::state[0] == LOW) && (IR::state[1] == LOW))) WheelEncoders::velocity = 0;  // I hate this line so much
 
-  if (!manual_override && Pid::enabled) {
+
+  // The cha cha trumps all
+  if(Camera::slideMode) {
+    slideThatShit();
+  }
+  else if (!manual_override && Pid::enabled) {
     controlStrategy2();
   } else {
     controlStrategy1();

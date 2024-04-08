@@ -11,7 +11,8 @@ const int RIGHT_HBRIDGE[2] = { D10, D11 };  // Pins that Control Right Motor H-B
 
 const double CORRECTION = 0.6;  // Correction Factor for Left/Right Motors
 
-extern bool activated;  // On-Off Flag for Motors (Toggled by GUI)
+extern bool activated;   // On-Off Flag for Motors (Toggled by GUI)
+extern bool onJunction;  // Boolean Flag Determining whether Buggy is at Junction
 
 void leftForward(int speed);    // Moves Left Motor Forward
 void leftBackward(int speed);   // Moves Left Motor Backward

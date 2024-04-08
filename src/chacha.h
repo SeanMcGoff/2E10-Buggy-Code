@@ -1,0 +1,191 @@
+#pragma once
+#ifndef chacha_H
+#define chacha_H
+#include <Arduino.h>
+namespace ChaCha {
+
+const double MS_PER_BEAT = (60.0 / 140) * 1000;
+
+enum COMMANDS {
+  NOTHING=0,      // NADA 
+  FLASH,        // To start it
+  FORWARD,      // Used for "One Hop This Time" paired with back
+  BACK,         // Take it back now y'all!
+  LEFT,         // To the Left!
+  RIGHT,        // Right foot let's stomp
+  CHACHALEFT,   // Cha-cha consists of one beat left...
+  CHACHARIGHT,  // ... then one beat right
+  CLAPON,       // Initial claps are one beat CLAPON...
+  CLAPOFF,      // ... and one beat CLAPOFF
+};
+
+
+extern bool firstEnable;
+extern int beatNum;
+
+const int SLIDE_SEQUENCE_SIZE = 158;
+
+const COMMANDS SLIDE_SEQUENCE[SLIDE_SEQUENCE_SIZE] =
+  {
+    COMMANDS::NOTHING, // We gonna get FUNKY
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::FLASH, // First Kicks
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::FLASH,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPOFF,// Clap, Clap Clap, Clap your hands!
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON,
+    COMMANDS::CLAPOFF,
+    COMMANDS::CLAPON, 
+    COMMANDS::NOTHING, // First verse
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::LEFT, // To the left!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::BACK, // Take it back now y'all
+    COMMANDS::BACK,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::FORWARD, // One hop this time!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::RIGHT, // Right foot let's stomp!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::LEFT, // Left foot let's stomp!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, // Cha cha real smooth
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, 
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT,
+    COMMANDS::NOTHING,
+    // Second Verse
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::LEFT, // To the left!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::BACK, // Take it back now y'all
+    COMMANDS::BACK,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::FORWARD, // One hop this time!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::RIGHT, // Right foot let's stomp!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::LEFT, // Left foot let's stomp!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, // Cha cha real smooth
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, 
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT,
+    COMMANDS::NOTHING,
+    // Now it's time to get funky!
+    COMMANDS::RIGHT, // To the right now!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::LEFT, // To the left!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::BACK, // Take it back now y'all
+    COMMANDS::BACK,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::FORWARD, // One hop this time!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::FORWARD, // One hop this time!
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::RIGHT, // Right foot two stomps!
+    COMMANDS::RIGHT,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::LEFT, // Left foot two stomps!
+    COMMANDS::LEFT,
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, // Sliiide to the left!
+    COMMANDS::CHACHALEFT, 
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT, // Sliiide to the right!
+    COMMANDS::CHACHARIGHT, 
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, // Criss Cross!
+    COMMANDS::CHACHARIGHT, 
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, // Criss Cross!
+    COMMANDS::CHACHARIGHT, 
+    COMMANDS::NOTHING,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, // Cha cha real smooth
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT,
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHALEFT, 
+    COMMANDS::NOTHING,
+    COMMANDS::CHACHARIGHT,
+    COMMANDS::NOTHING,
+  };
+
+}
+#endif

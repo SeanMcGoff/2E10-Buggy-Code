@@ -21,4 +21,16 @@ void LED_Matrix::slow() {
 void LED_Matrix::fast() {
   LED_Matrix::m.loadFrame(LED_Matrix::FAST_DESIGN);
 }  
+
+void LED_Matrix::clear() {
+  LED_Matrix::m.loadFrame(LED_Matrix::NO_DESIGN);
+}
+
+void LED_Matrix::flash() {
+  LED_Matrix::m.loadFrame(LED_Matrix::FLASH_DESIGN);
+}
+
+void LED_Matrix::clap() {
+  LED_Matrix::m.loadFrame(LED_Matrix::CLAP_DESIGN);
+}
      

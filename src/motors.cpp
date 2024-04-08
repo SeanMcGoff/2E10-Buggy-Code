@@ -1,6 +1,7 @@
 #include "motors.h"
 
 bool Motors::activated = false;
+bool Motors::onJunction = false;
 
 void Motors::leftForward(int speed) {
   digitalWrite(LEFT_HBRIDGE[0], HIGH);
