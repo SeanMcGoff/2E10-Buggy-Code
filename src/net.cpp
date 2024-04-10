@@ -49,7 +49,7 @@ void Net::printWiFiStatus() {
 }
 
 JsonDocument Net::recieveBuggyData(WiFiClient client) {
-  
+
   JsonDocument doc;
   // Sanity Check for if client is still connected between calling the function and the function running
   if (client.connected()) {
@@ -62,6 +62,6 @@ JsonDocument Net::recieveBuggyData(WiFiClient client) {
       Serial.println(err.c_str());
     }
   }
-  
+
   return doc;
 }

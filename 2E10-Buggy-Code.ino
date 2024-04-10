@@ -54,7 +54,6 @@ void junctionUpdateBuggy(int lMotor, int rMotor) {
       Motors::rightBackward(rMotor);
       break;
   }
-
 }
 
 // Updates the Buggy's Motors Given IR State
@@ -66,7 +65,7 @@ void updateBuggyMotors(bool isPid) {
   if (isPid) {
     lMotor = Pid::Output;
     rMotor = ceil(Pid::Output * Motors::CORRECTION);
-  } else if(Camera::isSpeedLimited) {
+  } else if (Camera::isSpeedLimited) {
     lMotor = ceil(200 * Camera::SPEED_LIMIT_COEFF);
     rMotor = ceil(200 * Motors::CORRECTION * Camera::SPEED_LIMIT_COEFF);
   } else {
@@ -194,26 +193,26 @@ void controlStrategy2() {
 }
 
 void slideThatShit() {
-  if(ChaCha::firstEnable) {
+  if (ChaCha::firstEnable) {
     Cha_Cha_Timer = millis();
     ChaCha::beatNum = 0;
     ChaCha::firstEnable = false;
   }
-  if(millis() - Cha_Cha_Timer >= ChaCha::MS_PER_BEAT) {
+  if (millis() - Cha_Cha_Timer >= ChaCha::MS_PER_BEAT) {
     Cha_Cha_Timer = millis();
     ChaCha::beatNum++;
 
     // Escape at end of song
-    if(ChaCha::beatNum >= ChaCha::SLIDE_SEQUENCE_SIZE) {
+    if (ChaCha::beatNum >= ChaCha::SLIDE_SEQUENCE_SIZE) {
       Camera::slideMode = false;
       ChaCha::firstEnable = true;
       return;
     }
-    
+
     Serial.println(ChaCha::beatNum);
     Serial.println(ChaCha::SLIDE_SEQUENCE[ChaCha::beatNum]);
     // The actual commands
-    switch(ChaCha::SLIDE_SEQUENCE[ChaCha::beatNum]) {
+    switch (ChaCha::SLIDE_SEQUENCE[ChaCha::beatNum]) {
       case ChaCha::COMMANDS::NOTHING:
         Motors::bothStop();
         LED_Matrix::clear();
@@ -233,16 +232,16 @@ void slideThatShit() {
         break;
       case ChaCha::COMMANDS::BACK:
         Motors::leftBackward(255);
-        Motors::rightBackward(255);  
-        break;     
+        Motors::rightBackward(255);
+        break;
       case ChaCha::COMMANDS::LEFT:
         Motors::leftStop();
-        Motors::rightForward(255);  
-        break; 
+        Motors::rightForward(255);
+        break;
       case ChaCha::COMMANDS::RIGHT:
         Motors::leftForward(255);
-        Motors::rightStop();  
-        break;  
+        Motors::rightStop();
+        break;
       case ChaCha::COMMANDS::CHACHALEFT:
         Motors::leftBackward(100);
         Motors::rightForward(200);
@@ -303,10 +302,9 @@ void loop() {
 
 
   // The cha cha trumps all
-  if(Camera::slideMode) {
+  if (Camera::slideMode) {
     slideThatShit();
-  }
-  else if (!manual_override && Pid::enabled) {
+  } else if (!manual_override && Pid::enabled) {
     controlStrategy2();
   } else {
     controlStrategy1();
